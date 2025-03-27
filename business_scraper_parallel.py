@@ -237,6 +237,27 @@ class BusinessScraper:
         else:
             cleaned['phone'] = None
         
+        # Clean name
+        name = cleaned.get('name', '')
+        if name and isinstance(name, str):
+            cleaned['name'] = name.strip()
+        else:
+            cleaned['name'] = ''
+        
+        # Clean description
+        description = cleaned.get('description', '')
+        if description and isinstance(description, str):
+            cleaned['description'] = description.strip()
+        else:
+            cleaned['description'] = ''
+        
+        # Clean employees
+        employees = cleaned.get('employees', '')
+        if employees and isinstance(employees, str):
+            cleaned['employees'] = employees.strip()
+        else:
+            cleaned['employees'] = ''
+        
         return cleaned
 
     def update_stats(self, rejection_reason: str = None, saved: bool = False):
@@ -286,47 +307,92 @@ class BusinessScraper:
             self.logger.error(f"Error saving scraper log: {str(e)}")
 
     def save_to_firebase(self, business: Dict, business_type: str, city: str, state: str) -> bool:
-        """Save business data to Firebase with improved error handling."""
+        """Save business data to Firebase"""
         try:
             # Clean and validate business data
-            cleaned_business = self.clean_business_data(business)
-            
-            # Check if business has valid email (primary requirement)
-            if not cleaned_business.get('email'):
-                self.save_rejected_business(business, 'no_valid_email', city, state, business_type)
-                self.update_stats(rejection_reason='no_valid_email')
-                return False
-            
-            # Create a unique ID for the business
-            business_id = f"{business_type}_{city}_{cleaned_business['name']}".lower()
-            business_id = re.sub(r'[^a-z0-9]', '_', business_id)
-            
-            # Add metadata
-            cleaned_business['metadata'] = {
-                'business_type': business_type,
+            cleaned_business = {
+                'name': business.get('name', '').strip(),
+                'description': business.get('description', '').strip(),
+                'website': business.get('website', '').strip(),
+                'email': business.get('email', '').strip(),
+                'phone': business.get('phone', '').strip(),
+                'employees': business.get('employees', '').strip(),
                 'city': city,
                 'state': state,
-                'last_updated': datetime.now().isoformat(),
-                'source': 'grok_api'
+                'type': business_type,
+                'timestamp': datetime.now().isoformat()
             }
-            
-            # Save to siteList in Firebase
-            firebase_url = f"{FIREBASE_URL}/siteList/{business_id}.json"
-            response = requests.put(firebase_url, json=cleaned_business)
-            
+
+            # Check for valid email
+            if not cleaned_business['email']:
+                self.logger.warning(f"No valid email found for {cleaned_business['name']}")
+                return False
+
+            # Create a unique business ID
+            business_id = f"{business_type}_{city}_{state}_{cleaned_business['name']}".lower()
+            business_id = re.sub(r'[^a-z0-9]', '_', business_id)
+
+            # Prepare business data with all required fields
+            business_data = {
+                'benefits': f"Custom software solutions for {business_type}",
+                'development_time': "2-4 weeks",
+                'estimated_cost': "Starting at $5,000",
+                'features': [
+                    "Custom business management",
+                    "Automated workflows",
+                    "Data analytics",
+                    "Customer relationship management"
+                ],
+                'type': business_type,
+                'timestamp': datetime.now().isoformat(),
+                'website': cleaned_business['website'],
+                'email': cleaned_business['email'],
+                'phone': cleaned_business['phone'],
+                'name': cleaned_business['name'],
+                'description': cleaned_business['description'],
+                'employees': cleaned_business['employees'],
+                'city': cleaned_business['city'],
+                'state': cleaned_business['state']
+            }
+
+            # Save to Firebase
+            url = f"{FIREBASE_URL}/businesses/{business_id}.json"
+            response = requests.put(url, json=business_data, timeout=REQUEST_TIMEOUT)
+
             if response.status_code == 200:
+                # Update statistics
+                self.stats['total_businesses'] += 1
+                self.stats['saved_businesses'] += 1
+                
+                # Save API action tracking
+                api_action = {
+                    'timestamp': datetime.now().isoformat(),
+                    'action': 'save_business',
+                    'business_type': business_type,
+                    'city': city,
+                    'state': state,
+                    'business_name': cleaned_business['name'],
+                    'success': True,
+                    'stats': {
+                        'total_businesses': self.stats['total_businesses'],
+                        'saved_businesses': self.stats['saved_businesses'],
+                        'rejected_businesses': self.stats['rejected_businesses'],
+                        'api_requests': self.stats['api_requests']
+                    }
+                }
+                
+                # Save API action to Firebase
+                action_url = f"{FIREBASE_URL}/apiActions/{datetime.now().strftime('%Y%m%d_%H%M%S')}_{business_id}.json"
+                requests.put(action_url, json=api_action, timeout=REQUEST_TIMEOUT)
+                
                 self.logger.info(f"Successfully saved business {cleaned_business['name']} to siteList")
-                self.update_stats(saved=True)
                 return True
             else:
-                self.logger.error(f"Failed to save business {business_id}: {response.status_code}")
-                self.logger.error(f"Response text: {response.text}")
+                self.logger.error(f"Failed to save business to Firebase: {response.status_code}")
                 return False
-            
+
         except Exception as e:
-            self.logger.error(f"Error saving business {business.get('name', 'Unknown')}: {str(e)}")
-            self.logger.error(f"Full business data: {json.dumps(business, indent=2)}")
-            self.update_stats(rejection_reason='firebase_save_error')
+            self.logger.error(f"Error saving business to Firebase: {str(e)}")
             return False
 
     def save_rejected_business(self, business: Dict, rejection_reason: str, city: str, state: str, business_type: str) -> bool:
@@ -433,15 +499,21 @@ class BusinessScraper:
                 1. Name (must be a real, existing business)
                 2. Description (2-3 sentences about their services and target market)
                 3. Website URL (must be a real, existing website that is currently active)
-                4. Email address (if available, must be a valid business email)
-                5. Phone number (if available, must be a valid US phone number)
+                4. Email address (MUST be extracted from the website's HTML, specifically from:
+                   - Contact page
+                   - About page
+                   - Footer
+                   - Contact forms
+                   - Business information sections
+                   Do NOT make up or guess email addresses)
+                5. Phone number (must be a valid US phone number)
                 6. Number of employees (if available, must be less than 1000)
                 
                 Important requirements:
                 - Only include real, existing businesses
                 - Businesses must be independently owned (not chains or franchises)
                 - Websites must be currently active and accessible
-                - Email addresses must be valid business emails
+                - Email addresses MUST be found in the website's HTML
                 - Phone numbers must be valid US numbers
                 - Employee count must be less than 1000
                 
