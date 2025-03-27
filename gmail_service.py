@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 
 import os
+from dotenv import load_dotenv
+
+# Load environment variables before any other imports
+load_dotenv(override=True)
+
 import base64
 import random
 from email.mime.text import MIMEText
@@ -27,8 +32,8 @@ class GmailService:
     def _get_sites_from_firebase(self):
         """Get sites from Firebase Realtime Database."""
         try:
-            # Get sites from the siteList endpoint
-            response = requests.get(f"{self.firebase_url}/siteList.json")
+            # Get sites from the businesses endpoint
+            response = requests.get(f"{self.firebase_url}/businesses.json")
             if response.status_code == 200:
                 sites = response.json()
                 if sites:
@@ -100,9 +105,12 @@ class GmailService:
 
     def create_message(self, to, subject, message_text):
         """Create a message for an email."""
+        sender_email = os.environ.get('SENDER_EMAIL', '').strip()
+        print(f"DEBUG: Creating message with to={to}, from={sender_email}")
+        
         message = MIMEMultipart('alternative')
-        message['to'] = to
-        message['from'] = EMAIL_CONFIG['sender_email']
+        message['to'] = to.strip()
+        message['from'] = sender_email
         message['subject'] = subject
         
         # Add Gmail-specific headers
@@ -112,17 +120,19 @@ class GmailService:
         message['Content-Type'] = 'text/html; charset=utf-8'
         message['MIME-Version'] = '1.0'
         
-        # Add authentication headers
-        message['List-Unsubscribe'] = f'<mailto:{EMAIL_CONFIG["sender_email"]}>'
+        # Add spam prevention headers
+        message['List-Unsubscribe'] = f'<mailto:{sender_email}?subject=unsubscribe>'
         message['Precedence'] = 'bulk'
         message['X-Auto-Response-Suppress'] = 'OOF, AutoReply'
+        message['X-Entity-Ref-ID'] = 'new'
+        message['X-Report-Abuse'] = f'Please report abuse to {sender_email}'
         
         # Add Gmail delegation headers
         message['X-Google-Sender-Delegation'] = 'true'
         message['X-Gm-Message-State'] = 'DELEGATED'
         
         # Add SPF and DKIM headers
-        message['X-Sender'] = EMAIL_CONFIG['sender_email']
+        message['X-Sender'] = sender_email
         message['X-Originating-IP'] = '[127.0.0.1]'
         message['X-Google-Original-Auth'] = 'true'
         
@@ -134,6 +144,7 @@ class GmailService:
         message.attach(text_part)
         message.attach(html_part)
         
+        print(f"DEBUG: Final message headers: {dict(message.items())}")
         return {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')}
 
     def send_message(self, to, subject, message_text):
@@ -161,14 +172,10 @@ class GmailService:
             website = site_data.get('website', 'N/A')
             tech_analysis = site_data.get('technical_analysis', {})
             business_analysis = site_data.get('business_analysis', {})
+            sender_email = os.environ.get('SENDER_EMAIL', '').strip()
             
             # Create a prompt for Grok
             prompt = f"""Create a professional sales email for {name}, a business that {description.lower()}.
-
-Current Technology: {tech_analysis.get('current_tech_level', 'N/A')}
-Growth Potential: {business_analysis.get('growth_potential', 'N/A')}
-Improvement Areas: {tech_analysis.get('improvement_areas', 'N/A')}
-Software Benefits: {business_analysis.get('software_benefits', 'N/A')}
 
 The email should:
 1. Start with a personal introduction about Stuart Grossman
@@ -182,6 +189,7 @@ The email should:
 9. Be formatted in HTML with modern styling
 10. Use a professional yet innovative tone
 11. Include their website: {website}
+12. Include my phone number: (415) 999-4541
 
 Format the response as HTML with CSS styling similar to this template:
 <!DOCTYPE html>
@@ -314,6 +322,13 @@ Format the response as HTML with CSS styling similar to this template:
             color: #334155;
             margin-bottom: 24px;
         }}
+        .contact-info {{
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            text-align: center;
+        }}
     </style>
 </head>
 <body>
@@ -323,14 +338,6 @@ Format the response as HTML with CSS styling similar to this template:
             <p class="intro-text">Hi, my name is Stuart Grossman, and I'm a software engineer with over 10 years of experience building full-stack applications. Recent advances in LLM and AI technologies have made it possible for independent developers like myself to deliver powerful, custom software solutions at a fraction of the cost and time it once required.</p>
             <p class="intro-text">Just a couple of years ago, developing custom web technologies meant huge costs, long development cycles, and uncertainty about the final product. Today, a single skilled developer or a small, agile team can create high-impact software for your business in days, not months—at a reasonable rate.</p>
             <p class="intro-text">If you've had software ideas but dismissed them as too expensive, complex, or time-consuming, now is the perfect time to reconsider. I specialize in helping businesses streamline operations, reduce overhead, and automate complex tasks across platforms.</p>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Current Technology Analysis</div>
-            <ul class="bullet-points">
-                <li><strong>Current Stack:</strong> {tech_analysis.get('current_tech_level', 'N/A')}</li>
-                <li><strong>Growth Potential:</strong> {business_analysis.get('growth_potential', 'N/A')}</li>
-            </ul>
         </div>
 
         <div class="section">
@@ -362,12 +369,17 @@ Format the response as HTML with CSS styling similar to this template:
         <div class="cta-section">
             <p class="cta-text">Let's Build Something Amazing Together</p>
             <p>A quick call is all it takes to explore how we can optimize your business with cutting-edge technology. Let's build something that saves you time, increases efficiency, and keeps you ahead of the competition.</p>
-            <p>Simply reply to this email to schedule a call where we can discuss your specific needs.</p>
+            <p>Simply reply to this email or call me at (415) 999-4541 to schedule a call where we can discuss your specific needs.</p>
+        </div>
+
+        <div class="contact-info">
+            <p><strong>Contact Information:</strong></p>
+            <p>📧 Email: {sender_email}</p>
+            <p>📱 Phone: (415) 999-4541</p>
         </div>
 
         <div class="footer">
             <p>Looking forward to connecting!<br><span class="highlight">Stuart Grossman</span></p>
-            <p>Website: <a href="{website}">{website}</a></p>
         </div>
     </div>
 </body>
@@ -521,14 +533,6 @@ Format the response as HTML with CSS styling similar to this template:
         </div>
 
         <div class="section">
-            <div class="section-title">Current Technology Analysis</div>
-            <ul class="bullet-points">
-                <li><strong>Current Stack:</strong> {tech_analysis.get('current_tech_level', 'N/A')}</li>
-                <li><strong>Growth Potential:</strong> {business_analysis.get('growth_potential', 'N/A')}</li>
-            </ul>
-        </div>
-
-        <div class="section">
             <div class="section-title">Innovative AI-Powered Solutions</div>
             <div class="tech-highlight">
                 We specialize in creating custom web applications that leverage:
@@ -557,12 +561,17 @@ Format the response as HTML with CSS styling similar to this template:
         <div class="cta-section">
             <p class="cta-text">Let's Build Something Amazing Together</p>
             <p>A quick call is all it takes to explore how we can optimize your business with cutting-edge technology. Let's build something that saves you time, increases efficiency, and keeps you ahead of the competition.</p>
-            <p>Simply reply to this email to schedule a call where we can discuss your specific needs.</p>
+            <p>Simply reply to this email or call me at (415) 999-4541 to schedule a call where we can discuss your specific needs.</p>
+        </div>
+
+        <div class="contact-info">
+            <p><strong>Contact Information:</strong></p>
+            <p>📧 Email: {sender_email}</p>
+            <p>📱 Phone: (415) 999-4541</p>
         </div>
 
         <div class="footer">
             <p>Looking forward to connecting!<br><span class="highlight">Stuart Grossman</span></p>
-            <p>Website: <a href="{website}">{website}</a></p>
         </div>
     </div>
 </body>
@@ -574,7 +583,7 @@ Format the response as HTML with CSS styling similar to this template:
             print(f"Site data structure: {json.dumps(site_data, indent=2)}")
             return None
 
-    def send_personalized_email(self, site_id=None):
+    def send_personalized_email(self, recipient_email):
         """Send a personalized email about a specific site."""
         print("\nPreparing personalized email...")
         
@@ -594,8 +603,8 @@ Format the response as HTML with CSS styling similar to this template:
             subject = f"Custom Software Solutions for {site_name}"
             
             # Send the email
-            print(f"Sending email to {EMAIL_CONFIG['test_recipient']} about {site_name}...")
-            result = self.send_message(EMAIL_CONFIG['test_recipient'], subject, email_content)
+            print(f"Sending email to {recipient_email} about {site_name}...")
+            result = self.send_message(recipient_email, subject, email_content)
             if not result:
                 raise ValueError("Failed to send email message")
             
