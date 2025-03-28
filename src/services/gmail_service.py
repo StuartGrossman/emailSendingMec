@@ -103,49 +103,52 @@ class GmailService:
         self.service = build('gmail', 'v1', credentials=self.creds)
         print("Authentication complete!")
 
-    def create_message(self, to, subject, message_text):
+    def create_message(self, to, subject, html_content):
         """Create a message for an email."""
-        sender_email = os.environ.get('SENDER_EMAIL', '').strip()
-        print(f"DEBUG: Creating message with to={to}, from={sender_email}")
-        
-        message = MIMEMultipart('alternative')
-        message['to'] = to.strip()
-        message['from'] = sender_email
-        message['subject'] = subject
-        
-        # Add Gmail-specific headers
-        message['X-Priority'] = '1'
-        message['X-MSMail-Priority'] = 'High'
-        message['Importance'] = 'high'
-        message['Content-Type'] = 'text/html; charset=utf-8'
-        message['MIME-Version'] = '1.0'
-        
-        # Add spam prevention headers
-        message['List-Unsubscribe'] = f'<mailto:{sender_email}?subject=unsubscribe>'
-        message['Precedence'] = 'bulk'
-        message['X-Auto-Response-Suppress'] = 'OOF, AutoReply'
-        message['X-Entity-Ref-ID'] = 'new'
-        message['X-Report-Abuse'] = f'Please report abuse to {sender_email}'
-        
-        # Add Gmail delegation headers
-        message['X-Google-Sender-Delegation'] = 'true'
-        message['X-Gm-Message-State'] = 'DELEGATED'
-        
-        # Add SPF and DKIM headers
-        message['X-Sender'] = sender_email
-        message['X-Originating-IP'] = '[127.0.0.1]'
-        message['X-Google-Original-Auth'] = 'true'
-        
-        # Create both plain text and HTML versions
-        text_part = MIMEText(message_text, 'plain')
-        html_part = MIMEText(message_text, 'html')
-        
-        # Add both parts to the message
-        message.attach(text_part)
-        message.attach(html_part)
-        
-        print(f"DEBUG: Final message headers: {dict(message.items())}")
-        return {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')}
+        try:
+            # Get sender email from environment
+            sender_email = os.environ.get('SENDER_EMAIL', '').strip()
+            if not sender_email:
+                raise ValueError("SENDER_EMAIL environment variable not set")
+            
+            # Create message container
+            message = MIMEMultipart('alternative')
+            
+            # Add headers for better deliverability
+            message['Content-Type'] = 'text/html; charset=utf-8'
+            message['MIME-Version'] = '1.0'
+            message['to'] = to.strip()
+            message['from'] = sender_email
+            message['subject'] = subject
+            
+            # Add authentication headers
+            message['X-Priority'] = '1'
+            message['X-MSMail-Priority'] = 'High'
+            message['Importance'] = 'high'
+            message['List-Unsubscribe'] = f'<mailto:{sender_email}?subject=unsubscribe>'
+            message['Precedence'] = 'bulk'
+            message['X-Auto-Response-Suppress'] = 'OOF, AutoReply'
+            message['X-Entity-Ref-ID'] = 'new'
+            message['X-Report-Abuse'] = f'Please report abuse to {sender_email}'
+            message['X-Google-Sender-Delegation'] = 'true'
+            message['X-Gm-Message-State'] = 'DELEGATED'
+            message['X-Sender'] = sender_email
+            message['X-Originating-IP'] = '[127.0.0.1]'
+            message['X-Google-Original-Auth'] = 'true'
+            
+            # Add SPF and DKIM headers
+            message['Received-SPF'] = 'pass'
+            message['Authentication-Results'] = f'mx.google.com; dkim=pass header.i=@{sender_email.split("@")[1]}'
+            
+            # Create the body of the message
+            html_part = MIMEText(html_content, 'html', 'utf-8')
+            message.attach(html_part)
+            
+            return {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')}
+            
+        except Exception as e:
+            print(f"Error creating message: {e}")
+            return None
 
     def send_message(self, to, subject, message_text):
         """Send an email message."""
@@ -583,37 +586,41 @@ Format the response as HTML with CSS styling similar to this template:
             print(f"Site data structure: {json.dumps(site_data, indent=2)}")
             return None
 
-    def send_personalized_email(self, recipient_email):
+    def send_personalized_email(self, to_email, business_data=None):
         """Send a personalized email about a specific site."""
-        print("\nPreparing personalized email...")
-        
         try:
-            # Get site data
-            site_data = self.get_random_site()
-            if not site_data:
-                raise ValueError("Failed to get random site data")
+            # If no business data provided, get a random site
+            if business_data is None:
+                business_data = self.get_random_site()
+                if not business_data:
+                    print("Failed to get site data")
+                    return False
             
-            # Generate personalized content
-            email_content = self.generate_personalized_email(site_data)
-            if not email_content:
-                raise ValueError("Failed to generate email content")
+            print(f"Sending email to {to_email} about {business_data['name']}...")
             
-            # Create subject line
-            site_name = site_data.get('name', 'Unknown Business')
-            subject = f"Custom Software Solutions for {site_name}"
+            # Generate email content
+            message_text = self.generate_personalized_email(business_data)
+            if not message_text:
+                print("Failed to generate email content")
+                return False
             
             # Send the email
-            print(f"Sending email to {recipient_email} about {site_name}...")
-            result = self.send_message(recipient_email, subject, email_content)
-            if not result:
-                raise ValueError("Failed to send email message")
+            success = self.send_message(
+                to=to_email,
+                subject=f"Custom Software Solutions for {business_data['name']}",
+                message_text=message_text
+            )
             
-            print("Email sent successfully!")
-            return result
-            
+            if success:
+                print("Email sent successfully!")
+                return True
+            else:
+                print("Failed to send email message")
+                return False
+                
         except Exception as e:
-            print(f"Error in send_personalized_email: {str(e)}")
-            return None
+            print(f"Error in send_personalized_email: {e}")
+            return False
 
     def test_connection(self):
         """Test the Gmail API connection by sending a test email."""

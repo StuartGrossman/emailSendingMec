@@ -8,9 +8,10 @@ import logging
 import re
 import dns.resolver
 from datetime import datetime
-from typing import List, Dict, Set, Tuple
+from typing import List, Dict, Set, Tuple, Optional
 from multiprocessing import Pool, Manager, Lock
-from config import (
+from bs4 import BeautifulSoup
+from src.config.config import (
     LOG_LEVEL, LOG_FILE, NUM_PROCESSES, RATE_LIMIT_DELAY, REQUEST_TIMEOUT,
     GROK_API_KEYS, FIREBASE_URL
 )
@@ -27,7 +28,29 @@ logging.basicConfig(
 )
 
 # Import the business types and cities from the original scraper
-from business_scraper import MAJOR_CITIES, BUSINESS_TYPES
+from src.scrapers.business_scraper import MAJOR_CITIES, BUSINESS_TYPES
+
+def get_random_user_agent():
+    """Return a random user agent string."""
+    user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59'
+    ]
+    return random.choice(user_agents)
+
+def get_headers():
+    """Return headers that mimic a browser."""
+    return {
+        'User-Agent': get_random_user_agent(),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Cache-Control': 'max-age=0'
+    }
 
 class BusinessScraper:
     def __init__(self, api_key: str, process_id: int):
@@ -47,6 +70,163 @@ class BusinessScraper:
             'rejection_reasons': {},
             'start_time': datetime.now().isoformat()
         }
+
+    def find_valid_email(self, soup: BeautifulSoup, business_name: str) -> Tuple[Optional[str], str]:
+        """
+        Search for valid email addresses in the webpage.
+        Returns tuple of (email, message) where email is None if no valid email found.
+        """
+        # Common email patterns to look for
+        email_patterns = [
+            r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',  # Standard email
+            r'[a-zA-Z0-9._%+-]+\s*\[at\]\s*[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',  # [at] format
+            r'[a-zA-Z0-9._%+-]+\s*\(at\)\s*[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',  # (at) format
+            r'[a-zA-Z0-9._%+-]+\s*@\s*[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'  # Spaced @ format
+        ]
+        
+        # Common email prefixes to look for
+        email_prefixes = [
+            'email', 'contact', 'info', 'support', 'help', 'inquiries',
+            'business', 'office', 'admin', 'sales', 'marketing'
+        ]
+        
+        # First try to find email in meta tags (fastest check)
+        meta_tags = soup.find_all('meta')
+        for tag in meta_tags:
+            content = tag.get('content', '')
+            for pattern in email_patterns:
+                matches = re.findall(pattern, content)
+                for email in matches:
+                    # Clean up the email
+                    email = re.sub(r'\s*\[at\]\s*', '@', email)
+                    email = re.sub(r'\s*\(at\)\s*', '@', email)
+                    email = re.sub(r'\s*@\s*', '@', email)
+                    
+                    # Validate the email
+                    if self.validate_email(email):
+                        return email, "Valid email found in meta tags"
+        
+        # Look for email in mailto links (second fastest check)
+        links = soup.find_all('a', href=True)
+        for link in links:
+            href = link.get('href', '')
+            if href.startswith('mailto:'):
+                email = href[7:]  # Remove 'mailto:' prefix
+                if self.validate_email(email):
+                    return email, "Valid email found in mailto link"
+        
+        # Look for contact forms (third fastest check)
+        forms = soup.find_all('form')
+        for form in forms:
+            # Check form action for email
+            action = form.get('action', '')
+            if 'mailto:' in action:
+                email = action.split('mailto:')[1].split('?')[0]
+                if self.validate_email(email):
+                    return email, "Valid email found in form action"
+        
+        # Look for email in text content (slowest check, but most thorough)
+        text_content = soup.get_text()
+        for pattern in email_patterns:
+            matches = re.findall(pattern, text_content)
+            for email in matches:
+                # Clean up the email
+                email = re.sub(r'\s*\[at\]\s*', '@', email)
+                email = re.sub(r'\s*\(at\)\s*', '@', email)
+                email = re.sub(r'\s*@\s*', '@', email)
+                
+                # Validate the email
+                if self.validate_email(email):
+                    return email, "Valid email found in text content"
+        
+        return None, "No valid email found on page"
+
+    def scrape_business_website(self, url: str, business_name: str, max_depth: int = 2) -> Tuple[Optional[str], str]:
+        """
+        Scrape business website for valid email address.
+        Returns tuple of (email, message) where email is None if no valid email found.
+        """
+        try:
+            # Add random delay between 2-5 seconds to be respectful to servers
+            time.sleep(random.uniform(2, 5))
+            
+            # Make request with browser-like headers
+            response = requests.get(url, headers=get_headers(), timeout=10)
+            response.raise_for_status()
+            
+            # Check if we got HTML content
+            if 'text/html' not in response.headers.get('Content-Type', '').lower():
+                return None, "Response is not HTML content"
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # First try to find email on main page
+            email, message = self.find_valid_email(soup, business_name)
+            if email:
+                return email, message
+            
+            # If no valid email found and we haven't reached max depth, look for contact page
+            if max_depth > 0:
+                # Look for contact page link
+                contact_links = soup.find_all('a', href=True)
+                for link in contact_links:
+                    href = link.get('href', '').lower()
+                    text = link.get_text().lower()
+                    
+                    # Check if this is likely a contact page
+                    if any(term in href or term in text for term in ['contact', 'about', 'reach', 'get-in-touch']):
+                        # Make sure the URL is absolute
+                        if not href.startswith(('http://', 'https://')):
+                            if href.startswith('/'):
+                                href = url.rstrip('/') + href
+                            else:
+                                href = url.rstrip('/') + '/' + href
+                        
+                        # Recursively search contact page
+                        email, message = self.scrape_business_website(href, business_name, max_depth - 1)
+                        if email:
+                            return email, message
+            
+            return None, "No valid email found after checking all pages"
+            
+        except requests.exceptions.RequestException as e:
+            return None, f"Network error: {str(e)}"
+        except Exception as e:
+            return None, f"Error scraping website: {str(e)}"
+
+    def validate_email(self, email: str) -> bool:
+        """Validate email format and check if domain has MX records."""
+        if not email or email.lower() == 'null':
+            return False
+        
+        # Basic email format validation
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            return False
+        
+        # Extract domain
+        domain = email.split('@')[1]
+        
+        # Skip validation for common disposable email domains
+        disposable_domains = {'tempmail.com', 'throwawaymail.com', 'tempmailaddress.com'}
+        if domain in disposable_domains:
+            return False
+            
+        try:
+            # Check for MX records
+            mx_records = dns.resolver.resolve(domain, 'MX')
+            if not mx_records:
+                return False
+                
+            # Additional check: Verify the MX record is not a catch-all or spam domain
+            mx_string = str(mx_records[0]).lower()
+            spam_indicators = {'spam', 'catch-all', 'bounce', 'invalid'}
+            if any(indicator in mx_string for indicator in spam_indicators):
+                return False
+                
+            return True
+        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+            return False
 
     def is_small_business(self, business: Dict) -> bool:
         """Check if a business meets small business criteria."""
@@ -94,26 +274,6 @@ class BusinessScraper:
                 return False
 
         return True
-
-    def validate_email(self, email: str) -> bool:
-        """Validate email format and check if domain has MX records."""
-        if not email or email.lower() == 'null':
-            return False
-        
-        # Basic email format validation
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(email_pattern, email):
-            return False
-        
-        # Extract domain
-        domain = email.split('@')[1]
-        
-        try:
-            # Check for MX records
-            dns.resolver.resolve(domain, 'MX')
-            return True
-        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
-            return False
 
     def validate_website(self, url: str) -> bool:
         """Validate website URL and check if it exists."""
@@ -488,7 +648,7 @@ class BusinessScraper:
         
         businesses = []
         max_retries = 3
-        retry_delay = 5  # seconds
+        retry_delay = 5
 
         for attempt in range(max_retries):
             try:
@@ -621,6 +781,16 @@ class BusinessScraper:
                                 business["email"] = None
                             else:
                                 self.logger.info(f"Valid email found for {business['name']}")
+
+                        # If no valid email but valid website, try to scrape email
+                        if not business.get("email") and business.get("website"):
+                            self.logger.info(f"Attempting to scrape email from website: {business['website']}")
+                            email, message = self.scrape_business_website(business["website"], business["name"])
+                            if email:
+                                self.logger.info(f"Found valid email through scraping: {email}")
+                                business["email"] = email
+                            else:
+                                self.logger.warning(f"Could not find valid email through scraping: {message}")
 
                         # Validate phone if present
                         if business.get("phone"):

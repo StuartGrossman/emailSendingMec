@@ -1,6 +1,5 @@
 # Environment variables
 .env
-.env.*
 
 # Python
 __pycache__/
@@ -25,8 +24,30 @@ wheels/
 .installed.cfg
 *.egg
 
-# Node
+# Virtual Environment
+venv/
+ENV/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+testData/
+*.log
+sent_emails.json
+token.json
 node_modules/
+package-lock.json
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Node
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -36,17 +57,16 @@ logs/
 *.log
 
 # Runtime data
-token.json
 scraper.log
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
 # Distribution / packaging
-*.egg-info/ 
+*.egg-info/
 
-# Local development
-.DS_Store 
+# Firebase
+firebase-debug.log
+.firebase/
+firebase-debug.*.log
+
+# Email
+*.eml
+*.msg 
