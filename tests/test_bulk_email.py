@@ -23,10 +23,10 @@ def test_save_sent_emails():
     sender.sent_emails = test_emails
     sender.save_sent_emails()
     
-    # Reload to verify
-    sender.sent_emails = []
-    sender.load_sent_emails()
-    assert sender.sent_emails == test_emails
+    # Create a new instance to verify persistence
+    new_sender = BulkEmailSender()
+    loaded_emails = new_sender.load_sent_emails()
+    assert loaded_emails == test_emails
 
 def test_get_businesses_from_firebase():
     """Test getting businesses from Firebase."""

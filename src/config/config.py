@@ -8,14 +8,33 @@ load_dotenv()
 
 # Grok API Configuration
 GROK_API_KEY = os.environ.get('GROK_API_KEY')
+GROK_API_KEY_2 = os.environ.get('GROK_API_KEY_2')
+GROK_API_KEY_3 = os.environ.get('GROK_API_KEY_3')
+GROK_API_KEY_4 = os.environ.get('GROK_API_KEY_4')
 
 # Firebase Configuration
 FIREBASE_URL = os.environ.get('FIREBASE_URL')
-FIREBASE_CLIENT_ID = os.environ.get('FIREBASE_CLIENT_ID')
-FIREBASE_CLIENT_CERT_URL = os.environ.get('FIREBASE_CLIENT_CERT_URL')
-FIREBASE_PRIVATE_KEY_ID = os.environ.get('FIREBASE_PRIVATE_KEY_ID')
-FIREBASE_PRIVATE_KEY = os.environ.get('FIREBASE_PRIVATE_KEY')
-FIREBASE_CLIENT_EMAIL = os.environ.get('FIREBASE_CLIENT_EMAIL')
+FIREBASE_CREDENTIALS = {
+    "type": "service_account",
+    "project_id": os.environ.get('FIREBASE_PROJECT_ID'),
+    "private_key_id": os.environ.get('FIREBASE_PRIVATE_KEY_ID'),
+    "private_key": os.environ.get('FIREBASE_PRIVATE_KEY').replace('\\n', '\n'),
+    "client_email": os.environ.get('FIREBASE_CLIENT_EMAIL'),
+    "client_id": os.environ.get('FIREBASE_CLIENT_ID'),
+    "auth_uri": os.environ.get('FIREBASE_AUTH_URI'),
+    "token_uri": os.environ.get('FIREBASE_TOKEN_URI'),
+    "auth_provider_x509_cert_url": os.environ.get('FIREBASE_AUTH_PROVIDER_X509_CERT_URL'),
+    "client_x509_cert_url": os.environ.get('FIREBASE_CLIENT_X509_CERT_URL')
+}
+
+# Mailgun Configuration
+MAILGUN_API_KEY = os.environ.get('MAILGUN_API_KEY')
+MAILGUN_DOMAIN = os.environ.get('MAILGUN_DOMAIN')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL')
+TEST_RECIPIENT = os.environ.get('TEST_RECIPIENT')
+
+# Hunter.io Configuration
+HUNTER_API_KEY = os.environ.get('HUNTER_API_KEY')
 
 # API Keys for Grok
 GROK_API_KEYS = [
@@ -37,4 +56,10 @@ REQUEST_TIMEOUT = 30  # seconds
 
 # Logging configuration
 LOG_LEVEL = "INFO"
-LOG_FILE = "scraper.log" 
+LOG_FILE = "scraper.log"
+
+# Google Places API Configuration
+GOOGLE_PLACES_API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY', 'google_places_api_key')
+DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', 'deepseek_api_key')
+MIN_RATING = 4.0  # Minimum Google rating to consider
+MIN_REVIEWS = 50  # Minimum number of reviews to consider 

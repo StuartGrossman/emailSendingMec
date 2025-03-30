@@ -6,8 +6,9 @@ import random
 from datetime import datetime
 from typing import List, Dict, Set, Tuple
 
-# Major US cities with their states
+# Major cities from English-speaking countries
 MAJOR_CITIES = [
+    # United States
     # Northeast
     ("New York", "NY"),
     ("Philadelphia", "PA"),
@@ -31,11 +32,6 @@ MAJOR_CITIES = [
     ("Richmond", "VA"),
     ("Louisville", "KY"),
     ("Nashville", "TN"),
-    ("Birmingham", "AL"),
-    ("Memphis", "TN"),
-    ("Columbia", "SC"),
-    ("Charleston", "SC"),
-    ("Savannah", "GA"),
     
     # Midwest
     ("Chicago", "IL"),
@@ -48,11 +44,6 @@ MAJOR_CITIES = [
     ("Minneapolis", "MN"),
     ("St. Louis", "MO"),
     ("Kansas City", "MO"),
-    ("Omaha", "NE"),
-    ("Des Moines", "IA"),
-    ("Madison", "WI"),
-    ("Grand Rapids", "MI"),
-    ("Toledo", "OH"),
     
     # Southwest
     ("Dallas", "TX"),
@@ -65,60 +56,143 @@ MAJOR_CITIES = [
     ("Albuquerque", "NM"),
     ("Tucson", "AZ"),
     ("Colorado Springs", "CO"),
-    ("Oklahoma City", "OK"),
-    ("Tulsa", "OK"),
-    ("El Paso", "TX"),
-    ("Fort Worth", "TX"),
-    ("San Diego", "CA"),
     
     # West Coast
     ("Los Angeles", "CA"),
     ("San Francisco", "CA"),
     ("Seattle", "WA"),
     ("Portland", "OR"),
-    ("Sacramento", "CA"),
-    ("San Jose", "CA"),
-    ("Oakland", "CA"),
-    ("Fresno", "CA"),
-    ("Spokane", "WA"),
-    ("Eugene", "OR"),
-    ("Boise", "ID"),
-    ("Salt Lake City", "UT"),
-    ("Reno", "NV"),
-    ("Bakersfield", "CA"),
-    ("Modesto", "CA"),
+    ("San Diego", "CA"),
     
-    # Small Towns (Population 250k-500k)
-    ("Boulder", "CO"),
-    ("Santa Fe", "NM"),
-    ("Bend", "OR"),
-    ("Asheville", "NC"),
-    ("Chattanooga", "TN"),
-    ("Greenville", "SC"),
-    ("Knoxville", "TN"),
-    ("Lexington", "KY"),
-    ("Ann Arbor", "MI"),
-    ("Fort Collins", "CO"),
-    ("Bozeman", "MT"),
-    ("Flagstaff", "AZ"),
-    ("Santa Barbara", "CA"),
-    ("Eugene", "OR"),
-    ("Bellingham", "WA"),
-    ("Durham", "NC"),
-    ("Winston-Salem", "NC"),
-    ("Green Bay", "WI"),
-    ("Duluth", "MN"),
-    ("Sioux Falls", "SD"),
-    ("Lincoln", "NE"),
-    ("Fargo", "ND"),
-    ("Billings", "MT"),
-    ("Missoula", "MT"),
-    ("Anchorage", "AK"),
-    ("Honolulu", "HI"),
-    ("Burlington", "VT"),
-    ("Portsmouth", "NH"),
-    ("Bangor", "ME"),
-    ("Augusta", "ME")
+    # Canada
+    # Ontario
+    ("Toronto", "ON"),
+    ("Ottawa", "ON"),
+    ("Hamilton", "ON"),
+    ("London", "ON"),
+    ("Windsor", "ON"),
+    
+    # Quebec
+    ("Montreal", "QC"),
+    ("Quebec City", "QC"),
+    
+    # British Columbia
+    ("Vancouver", "BC"),
+    ("Victoria", "BC"),
+    ("Surrey", "BC"),
+    
+    # Alberta
+    ("Calgary", "AB"),
+    ("Edmonton", "AB"),
+    
+    # Other Canadian Cities
+    ("Winnipeg", "MB"),
+    ("Halifax", "NS"),
+    ("St. John's", "NL"),
+    
+    # United Kingdom
+    # England
+    ("London", "England"),
+    ("Manchester", "England"),
+    ("Birmingham", "England"),
+    ("Leeds", "England"),
+    ("Liverpool", "England"),
+    ("Bristol", "England"),
+    ("Sheffield", "England"),
+    ("Newcastle", "England"),
+    ("Nottingham", "England"),
+    ("Leicester", "England"),
+    
+    # Scotland
+    ("Edinburgh", "Scotland"),
+    ("Glasgow", "Scotland"),
+    ("Aberdeen", "Scotland"),
+    ("Dundee", "Scotland"),
+    
+    # Wales
+    ("Cardiff", "Wales"),
+    ("Swansea", "Wales"),
+    
+    # Northern Ireland
+    ("Belfast", "Northern Ireland"),
+    ("Derry", "Northern Ireland"),
+    
+    # Ireland
+    ("Dublin", "Ireland"),
+    ("Cork", "Ireland"),
+    ("Limerick", "Ireland"),
+    ("Galway", "Ireland"),
+    ("Waterford", "Ireland"),
+    
+    # Australia
+    # New South Wales
+    ("Sydney", "NSW"),
+    ("Newcastle", "NSW"),
+    ("Wollongong", "NSW"),
+    
+    # Victoria
+    ("Melbourne", "VIC"),
+    ("Geelong", "VIC"),
+    ("Ballarat", "VIC"),
+    
+    # Queensland
+    ("Brisbane", "QLD"),
+    ("Gold Coast", "QLD"),
+    ("Townsville", "QLD"),
+    
+    # Western Australia
+    ("Perth", "WA"),
+    ("Fremantle", "WA"),
+    
+    # South Australia
+    ("Adelaide", "SA"),
+    
+    # Tasmania
+    ("Hobart", "TAS"),
+    ("Launceston", "TAS"),
+    
+    # New Zealand
+    ("Auckland", "NZ"),
+    ("Wellington", "NZ"),
+    ("Christchurch", "NZ"),
+    ("Hamilton", "NZ"),
+    ("Tauranga", "NZ"),
+    
+    # South Africa
+    ("Cape Town", "WC"),
+    ("Johannesburg", "GP"),
+    ("Durban", "KZN"),
+    ("Pretoria", "GP"),
+    ("Port Elizabeth", "EC"),
+    
+    # Singapore
+    ("Singapore", "SG"),
+    
+    # Hong Kong
+    ("Hong Kong", "HK"),
+    
+    # India (Major English-speaking cities)
+    ("Mumbai", "MH"),
+    ("Delhi", "DL"),
+    ("Bangalore", "KA"),
+    ("Chennai", "TN"),
+    ("Hyderabad", "TG"),
+    
+    # Philippines (Major English-speaking cities)
+    ("Manila", "PH"),
+    ("Cebu City", "PH"),
+    ("Davao City", "PH"),
+    ("Quezon City", "PH"),
+    
+    # Malaysia (Major English-speaking cities)
+    ("Kuala Lumpur", "MY"),
+    ("Penang", "MY"),
+    ("Johor Bahru", "MY"),
+    
+    # UAE (Major English-speaking cities)
+    ("Dubai", "AE"),
+    ("Abu Dhabi", "AE"),
+    ("Sharjah", "AE")
 ]
 
 # Business types with their software need probability scores (1-10)
@@ -143,7 +217,143 @@ BUSINESS_TYPES = [
     ("Food Production", 7, "Local food producers and bakeries"),
     ("Photography Studios", 7, "Local photography businesses"),
     ("Interior Design Firms", 8, "Small interior design studios"),
-    ("Marketing Agencies", 9, "Small marketing and advertising firms")
+    ("Marketing Agencies", 9, "Small marketing and advertising firms"),
+    
+    # Additional business types
+    ("E-commerce Stores", 9, "Online businesses selling goods or services"),
+    ("Consulting Firms", 8, "Small consulting companies"),
+    ("Non-Profit Organizations", 7, "Non-profit and charity organizations"),
+    ("Construction Materials Suppliers", 7, "Suppliers of materials for the construction industry"),
+    ("Transportation Services", 6, "Local transport and logistics businesses"),
+    ("Insurance Agencies", 8, "Local or small insurance firms"),
+    ("Home Services", 6, "Home repair and improvement businesses"),
+    ("IT Support Services", 8, "Businesses providing IT services and support"),
+    ("Travel Agencies", 7, "Small travel agencies"),
+    ("Digital Product Creators", 9, "Businesses selling digital products or services"),
+    ("Fitness Equipment Suppliers", 6, "Companies selling fitness equipment"),
+    ("Security Services", 7, "Local security firms providing installation and monitoring"),
+    ("Real Estate Developers", 8, "Companies involved in property development"),
+    ("Health and Wellness Coaches", 7, "Personal coaching services in wellness and fitness"),
+    ("Luxury Goods Providers", 7, "Retailers of high-end, specialty products"),
+    ("Craft Breweries", 7, "Small businesses specializing in craft beer production"),
+    ("Specialty Food Stores", 8, "Retailers of gourmet or specialty foods"),
+    ("Event Venues", 8, "Business venues offering space for events and gatherings"),
+    ("Tech Startups", 9, "Innovative small tech companies in various industries"),
+    ("Social Media Influencers", 7, "Individuals or agencies managing social media campaigns"),
+    ("SaaS Companies", 10, "Software as a Service companies developing platforms or applications"),
+    ("Freelancers & Creative Professionals", 6, "Individuals or agencies offering freelance services like writing, design, etc."),
+    ("Public Relations Firms", 8, "Companies specializing in media relations and brand management"),
+    ("Recruitment Agencies", 7, "Small businesses helping companies find and hire talent"),
+    ("Mobile App Developers", 9, "Businesses developing mobile applications"),
+    ("Cybersecurity Firms", 8, "Companies focused on providing cybersecurity solutions"),
+    ("3D Printing Services", 7, "Businesses offering 3D printing solutions for various industries"),
+    ("Subscription Box Services", 8, "E-commerce businesses offering subscription box products"),
+    ("Tech Support Startups", 7, "Small tech support businesses"),
+    ("Personalized Goods Providers", 7, "Companies offering customizable or personalized products"),
+    ("Game Development Studios", 9, "Businesses developing video games or interactive media"),
+    ("Online Education Platforms", 9, "Companies offering online courses or educational materials"),
+    
+    # Niche and emerging businesses
+    ("Aquarium Services", 6, "Businesses offering aquarium setup and maintenance"),
+    ("Drones and UAV Services", 8, "Companies offering drone-related services like surveying or aerial photography"),
+    ("Urban Farming", 7, "Small businesses involved in urban agriculture or hydroponic farming"),
+    ("Virtual Reality Studios", 9, "Businesses creating VR content or applications"),
+    ("Sustainable Product Brands", 7, "Eco-friendly product companies or sustainability-focused businesses"),
+    ("Mobile Car Wash Services", 6, "Mobile businesses offering car washing and detailing"),
+    ("Home Staging Companies", 7, "Businesses that stage homes for sale"),
+    ("Antique Dealers", 6, "Small businesses specializing in antique sales and restoration"),
+    ("Specialty Coffee Roasters", 7, "Local coffee roasters and distributors"),
+    ("Comic Book Shops", 6, "Retailers specializing in comic book sales and collectibles"),
+    ("Tiny House Builders", 7, "Businesses building and selling tiny homes"),
+    ("Furniture Restoration", 6, "Companies specializing in the restoration of vintage furniture"),
+    ("Co-Working Spaces", 7, "Shared workspaces for freelancers and small businesses"),
+    ("Urban Planners", 7, "Companies providing urban design and planning services"),
+    ("Escape Rooms", 6, "Entertainment venues offering escape room experiences"),
+    ("Pet Training Services", 6, "Businesses offering dog or pet training and behavioral services"),
+    ("Custom Apparel Designers", 7, "Small businesses focused on custom clothing design and production"),
+    ("Mobile Repair Services", 6, "Businesses providing repair services at the customer's location"),
+    ("Nail Salons", 5, "Local businesses specializing in nail care and art"),
+    ("Personal Stylists", 6, "Freelance or boutique businesses offering styling services"),
+    ("Tattoo Studios", 6, "Local businesses providing tattoo design and artistry"),
+    ("Laser Tag Arenas", 5, "Entertainment venues offering laser tag experiences"),
+    ("Food Trucks", 7, "Mobile food service businesses specializing in unique offerings"),
+    ("Mobile Health Clinics", 7, "Mobile services providing healthcare to underserved areas"),
+    ("Environmental Consulting", 8, "Consulting firms offering environmental and sustainability advice"),
+    ("Bicycle Repair Shops", 5, "Local businesses offering bicycle maintenance and repair"),
+    ("3D Animation Studios", 8, "Companies providing animation services for film, gaming, and marketing"),
+    ("Virtual Assistants", 6, "Freelance services offering administrative assistance remotely"),
+    ("Smart Home Installation", 7, "Companies providing smart home and automation installation services"),
+    ("Film Production Studios", 8, "Small businesses focused on independent film production"),
+    ("Voice Over Artists", 6, "Freelance or small businesses offering voice-over services"),
+    ("Personal Chefs", 6, "Freelancers offering customized meal preparation and private cooking services"),
+    ("Candle Makers", 5, "Small businesses producing hand-made or specialty candles"),
+    ("Outdoor Adventure Guides", 7, "Small companies offering outdoor experiences or adventure tours"),
+    ("Self-Publishing Services", 6, "Businesses that assist in the self-publishing of books and media"),
+    ("Elderly Care Providers", 7, "Businesses focused on in-home healthcare for elderly clients"),
+    
+    # Legacy businesses with outdated software
+    ("Accounting Firms", 9, "Firms providing accounting and bookkeeping services, often using legacy accounting software"),
+    ("Wholesale Distributors", 8, "Businesses in wholesale distribution that may rely on older inventory and order management systems"),
+    ("Car Dealerships", 8, "Dealerships with outdated inventory and customer relationship management software"),
+    ("Publishing Houses", 8, "Publishers of books, newspapers, or magazines with legacy editing, design, and distribution systems"),
+    ("Printing Presses", 7, "Printing companies with legacy job tracking and production management systems"),
+    ("Utilities Companies", 9, "Companies providing essential services such as water, electricity, and gas, often with legacy infrastructure management systems"),
+    ("Pharmacies", 8, "Long-standing pharmacies with outdated patient management and inventory systems"),
+    ("Law Enforcement Agencies", 9, "Public safety departments with legacy records management and communication systems"),
+    ("Public Libraries", 8, "Libraries with older cataloging and borrowing systems"),
+    ("Real Estate Investment Firms", 8, "Established firms managing real estate portfolios with outdated property tracking systems"),
+    ("Hotels & Inns", 8, "Hospitality businesses with outdated booking, reservation, and property management software"),
+    ("Dry Cleaners", 7, "Long-established dry cleaning businesses with legacy inventory tracking and order management systems"),
+    ("Agricultural Cooperatives", 8, "Old cooperatives for farming or agriculture with outdated inventory and member management software"),
+    ("Telecommunications Companies", 9, "Telecom providers with outdated billing and customer service systems"),
+    ("Auto Insurance Firms", 9, "Insurance companies focused on auto insurance with legacy claims and policy management systems"),
+    ("Financial Advisors", 8, "Financial advisory firms using older portfolio management and client relationship software"),
+    ("Furniture Retailers", 8, "Retailers with outdated point-of-sale and inventory management systems"),
+    
+    # Emerging and innovative businesses
+    ("Virtual Event Platforms", 9, "Businesses offering virtual event hosting and management tools"),
+    ("Biotechnology Startups", 9, "Companies working in biotech and pharmaceutical innovations"),
+    ("Smart Agriculture", 8, "Farming businesses utilizing smart technology for agriculture"),
+    ("Pop-Up Retail Shops", 7, "Temporary retail shops, often focused on seasonal sales"),
+    ("Mobile Fitness Trainers", 7, "Freelancers or small businesses providing on-the-go fitness services"),
+    ("Online Marketplace Platforms", 9, "Businesses creating platforms for buying and selling products online"),
+    ("Aquatic Therapy Centers", 8, "Therapy businesses utilizing water-based treatment methods"),
+    ("Voice Recognition Services", 8, "Companies offering voice-to-text or speech recognition software"),
+    ("Personalized Nutrition Services", 7, "Businesses offering custom dietary planning and nutrition consultations"),
+    ("Green Energy Consulting", 8, "Firms providing advisory services for sustainable energy solutions"),
+    ("Custom Drone Services", 8, "Businesses specializing in drone-based services like mapping or delivery"),
+    ("Luxury Car Rentals", 7, "High-end vehicle rental services"),
+    ("On-Demand Delivery Services", 8, "Businesses offering fast delivery of goods and services"),
+    ("Digital Artists & Illustrators", 6, "Freelance digital artists or small design studios"),
+    ("Mobile Beauty Services", 7, "Freelancers providing beauty services at clients' locations"),
+    ("Bespoke Tailoring Services", 6, "Custom clothing designers providing tailored fashion"),
+    ("Vape Shops", 6, "Retail businesses selling vape products and accessories"),
+    ("Sustainable Fashion Brands", 7, "Eco-conscious fashion brands focusing on sustainability"),
+    ("Subscription-Based Food Services", 8, "Food delivery services offering subscription-based meal plans"),
+    ("Gaming Cafes", 7, "Cafes with high-end gaming PCs and gaming-focused services"),
+    ("Smart Wearables", 8, "Businesses developing or selling wearable technology"),
+    ("Crowdfunding Platforms", 9, "Platforms facilitating crowdfunding for projects and startups"),
+    ("Urban Transportation Solutions", 7, "Services offering solutions for urban mobility like e-scooters or shared bikes"),
+    ("Craft Distilleries", 7, "Small, artisanal distilleries producing craft spirits"),
+    ("Sustainable Packaging Solutions", 8, "Businesses providing eco-friendly packaging alternatives"),
+    ("Health & Fitness Apps", 9, "Mobile applications focused on health, wellness, and fitness"),
+    ("Cloud Kitchens", 8, "Restaurants that operate exclusively through delivery services without physical dining spaces"),
+    ("Cryptocurrency Platforms", 9, "Platforms offering trading, storage, or services related to cryptocurrencies"),
+    ("Local Art Galleries", 6, "Small businesses showcasing and selling local or contemporary art"),
+    ("DIY Craft Subscription Boxes", 7, "Subscription services providing craft kits and DIY projects"),
+    ("Talent Agencies", 7, "Agencies representing actors, models, or other professionals"),
+    ("Independent Publishers", 7, "Small-scale publishers specializing in niche markets or independent works"),
+    ("Remote Team Collaboration Tools", 9, "Software businesses focused on remote team management and collaboration solutions"),
+    ("Virtual Reality Fitness", 9, "Fitness businesses offering virtual reality-based workout experiences"),
+    ("Crowdsourced Translation Services", 8, "Platforms offering translation services via crowdsourcing"),
+    ("NFT Marketplace Platforms", 9, "Platforms that support buying and selling NFTs (Non-Fungible Tokens)"),
+    ("Pet Adoption Platforms", 7, "Online platforms connecting pet owners with adoptable animals"),
+    ("Microgreens Farming", 7, "Small-scale farming businesses focused on growing microgreens"),
+    ("Personalized Gifts", 6, "Retail businesses offering custom or personalized gift products"),
+    ("Senior Living Communities", 8, "Businesses providing services and management for senior living facilities"),
+    ("B2B Supply Chain Solutions", 9, "Platforms offering business-to-business supply chain management tools"),
+    ("Custom Furniture Designers", 7, "Businesses focused on creating bespoke furniture pieces"),
+    ("Nutraceuticals", 7, "Companies involved in producing supplements and functional foods")
 ]
 
 def get_existing_sites() -> Dict:

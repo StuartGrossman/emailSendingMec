@@ -1,154 +1,136 @@
-# Email Sender Project
+# Email Sender and Lead Management System
 
-A Python-based system for scraping business information and sending personalized emails.
-
-## Project Structure
-```
-emailSender/
-├── src/                    # Source code directory
-│   ├── scrapers/          # Web scraping modules
-│   │   ├── __init__.py
-│   │   ├── business_scraper_parallel.py  # Main parallel business scraper
-│   │   └── business_scraper.py           # Base business scraper
-│   ├── services/          # External service integrations
-│   │   ├── __init__.py
-│   │   ├── gmail_service.py             # Gmail API integration
-│   │   ├── mailgun_service.py           # Mailgun API integration
-│   │   └── hunter_service.py            # Hunter.io API integration
-│   ├── utils/            # Utility functions
-│   │   ├── __init__.py
-│   │   └── email_validator.py           # Email validation utilities
-│   ├── config/           # Configuration files
-│   │   ├── __init__.py
-│   │   └── config.py                    # Main configuration settings
-│   └── models/           # Data models and templates
-│       ├── __init__.py
-│       └── email_templates.py           # Email template definitions
-├── tests/                # Test files
-│   ├── __init__.py
-│   ├── test_scraper.py   # Scraper tests
-│   └── test_validator.py # Data validation tests
-├── testData/            # Test data storage
-├── .env                 # Environment variables
-├── requirements.txt     # Project dependencies
-└── README.md           # This file
-```
-
-## File Descriptions
-
-### Scrapers
-- `business_scraper_parallel.py`: Main parallel scraper that processes multiple cities and business types concurrently using Grok API
-- `business_scraper.py`: Base scraper with core functionality for business data extraction and validation
-
-### Services
-- `gmail_service.py`: Handles Gmail API integration for sending emails
-- `mailgun_service.py`: Manages email sending through Mailgun API
-- `hunter_service.py`: Integrates with Hunter.io API for email finding
-
-### Utils
-- `email_validator.py`: Contains functions for email validation, including format checking and DNS validation
-
-### Config
-- `config.py`: Central configuration file containing settings for API keys, rate limits, and other parameters
-
-### Models
-- `email_templates.py`: Defines email templates and personalization logic
-
-### Tests
-- `test_scraper.py`: Tests for the business scraper functionality
-- `test_validator.py`: Tests for data validation utilities
+A comprehensive system for sending personalized emails and managing business leads, featuring AI-powered lead analysis and a modern React frontend.
 
 ## Features
 
-### 1. Business Information Scraping
-- Parallel processing of business data
-- Multiple validation methods for emails, websites, and phone numbers
-- Efficient email scraping with prioritized checks
-- DNS validation for email domains
+### 1. Email Sending System
+- Personalized email generation using Grok AI
+- Support for both Gmail and Mailgun
+- Bulk email sending with rate limiting
+- Email validation and testing
+- Progress tracking and error handling
 
-### 2. Email Validation
-- Format validation
-- DNS record checking
-- MX record verification
-- Disposable email filtering
-- Spam domain detection
+### 2. Phone Lead Scraper
+- AI-powered business analysis using Grok
+- Intelligent lead scoring based on multiple factors:
+  - Current technology stack
+  - Business operations
+  - Growth potential
+  - Custom software opportunities
+  - Decision maker accessibility
+- Detailed sales conversation guides
+- Firebase integration for lead storage
 
-### 3. Data Storage
-- Firebase integration for storing business data
-- JSON-based test data storage
-- Validation results logging
+### 3. React Frontend
+- Modern, responsive UI for lead management
+- Real-time Firebase integration
+- Lead analysis visualization
+- Call notes and follow-up tracking
+- Lead status management
+
+## Project Structure
+
+```
+emailSender/
+├── src/
+│   ├── components/          # React components
+│   │   ├── LeadsList.jsx   # Main leads management interface
+│   │   └── LeadCard.jsx    # Individual lead display and notes
+│   ├── services/           # Backend services
+│   │   ├── gmail_service.py
+│   │   ├── mailgun_service.py
+│   │   └── phone_lead_scraper.py
+│   ├── config/            # Configuration files
+│   │   └── config.py
+│   └── utils/             # Utility functions
+├── tests/                 # Test files
+│   ├── test_email.py
+│   ├── test_bulk_email.py
+│   └── test_phone_lead_scraper.py
+└── frontend/             # React frontend
+    ├── src/
+    │   ├── components/
+    │   ├── services/
+    │   └── App.jsx
+    └── package.json
+```
 
 ## Setup
 
-1. Install dependencies:
+1. Clone the repository:
 ```bash
+git clone https://github.com/StuartGrossman/emailSendingMec.git
+cd emailSendingMec
+```
+
+2. Set up Python environment:
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-2. Set up environment variables in `.env`:
-```
-GROK_API_KEY=your_grok_api_key
-FIREBASE_URL=your_firebase_url
+3. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your credentials
 ```
 
-3. Run tests:
+4. Set up React frontend:
 ```bash
-python3 -m pytest tests/
+cd frontend
+npm install
+```
+
+## Running Tests
+
+1. Python tests:
+```bash
+python -m pytest tests/ -v
+```
+
+2. React tests:
+```bash
+cd frontend
+npm test
 ```
 
 ## Usage
 
-### Running the Scraper
+### Phone Lead Scraper
+
+1. Run the scraper:
 ```bash
-python3 src/scrapers/business_scraper_parallel.py
+python -m src.services.phone_lead_scraper --city "San Francisco" --state "CA" --business-type "auto_repair"
 ```
 
-### Validating Data
+2. View leads in the React frontend:
 ```bash
-python3 tests/test_validator.py
+cd frontend
+npm start
 ```
 
-## Development History
+### Email Sender
 
-1. Initial Setup
-   - Basic project structure
-   - Environment configuration
-   - Dependency management
-
-2. Core Scraping Implementation
-   - Business data scraping
-   - Email validation
-   - Website validation
-   - Phone number validation
-
-3. Parallel Processing
-   - Multi-threaded scraping
-   - Rate limiting
-   - Error handling
-
-4. Data Validation
-   - Comprehensive validation suite
-   - Test data generation
-   - Results logging
-
-5. Optimization
-   - Email validation improvements
-   - Scraping efficiency
-   - Cost-effective processing
-
-## Testing
-
-The project includes comprehensive tests for:
-- Email validation
-- Website validation
-- Phone number validation
-- Data integrity
-- Scraping functionality
-
-Run tests with:
+1. Send test email:
 ```bash
-python3 -m pytest tests/
+python -m src.services.send_email --to "test@example.com" --subject "Test Email"
 ```
+
+2. Send bulk emails:
+```bash
+python -m src.services.send_bulk_emails --city "San Francisco" --state "CA" --business-type "auto_repair"
+```
+
+## Environment Variables
+
+Required environment variables:
+- `GROK_API_KEY`: Your Grok API key
+- `FIREBASE_URL`: Your Firebase Realtime Database URL
+- `MAILGUN_API_KEY`: Your Mailgun API key
+- `MAILGUN_DOMAIN`: Your Mailgun domain
+- `GMAIL_CREDENTIALS`: Path to your Gmail credentials file
 
 ## Contributing
 

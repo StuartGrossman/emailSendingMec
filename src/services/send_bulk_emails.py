@@ -4,7 +4,9 @@ import os
 import time
 from datetime import datetime
 from typing import List, Dict
-from mailgun_service import MailgunService
+from src.services.mailgun_service import MailgunService
+from src.config.config import FIREBASE_URL, RATE_LIMIT_DELAY
+from src.models.email_templates import match_business_to_template
 
 class BulkEmailSender:
     def __init__(self):

@@ -1,7 +1,13 @@
 import os
 import requests
 from dotenv import load_dotenv
-from hunter_service import HunterService
+from src.services.hunter_service import HunterService
+from src.config.config import (
+    MAILGUN_API_KEY,
+    MAILGUN_DOMAIN,
+    SENDER_EMAIL,
+    REQUEST_TIMEOUT
+)
 
 # Load environment variables
 load_dotenv()
