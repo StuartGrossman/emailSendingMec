@@ -863,62 +863,37 @@ Visit their website at {business['website']} and provide ONLY the JSON object, n
             self.logger.error(f"Error saving to Firebase: {str(e)}")
             return False
 
-def run_scraper_worker(worker_id):
-    """Worker function for parallel scraping"""
-    # Generate random city and business type
-    city_data = random.choice(MAJOR_CITIES)
-    city, state = city_data[0], city_data[1]
-    business_type = random.choice(BUSINESS_TYPES)
-    scraper = PhoneLeadScraper([GROK_API_KEY, GROK_API_KEY_2, GROK_API_KEY_3, GROK_API_KEY_4])
-    try:
-        leads = scraper.get_phone_leads(city, state, business_type[0])
-        print(f"Worker {worker_id}: Found {len(leads)} leads for {business_type[0]} in {city}, {state}")
-        return leads
-    except Exception as e:
-        print(f"Worker {worker_id}: Error in parallel scraper: {str(e)}")
-        return []
-
 def main():
-    parser = argparse.ArgumentParser(description='Scrape phone leads from Google Places API')
-    parser.add_argument('--city', type=str, help='City to search in')
-    parser.add_argument('--state', type=str, help='State to search in')
-    parser.add_argument('--business-type', type=str, help='Type of business to search for')
-    parser.add_argument('--num-cities', type=int, default=1, help='Number of random cities to search')
-    parser.add_argument('--num-business-types', type=int, default=1, help='Number of random business types to search')
-    parser.add_argument('--parallel', type=int, default=1, help='Number of parallel scraper instances to run')
+    parser = argparse.ArgumentParser(description='Scrape phone leads for businesses')
+    parser.add_argument('--num-cities', type=int, default=5, help='Number of cities to scrape')
+    parser.add_argument('--num-business-types', type=int, default=3, help='Number of business types to scrape per city')
     args = parser.parse_args()
 
-    if args.parallel > 1:
-        # Run parallel scrapers
-        from multiprocessing import Pool
-        
-        # Create a pool of workers
-        with Pool(processes=args.parallel) as pool:
-            # Run the scraper multiple times in parallel
-            results = pool.map(run_scraper_worker, range(args.parallel * 2))
-            
-            # Combine all leads
-            all_leads = []
-            for leads in results:
-                all_leads.extend(leads)
-            
-            # Save all leads to Firebase
-            if all_leads:
-                scraper = PhoneLeadScraper([GROK_API_KEY, GROK_API_KEY_2, GROK_API_KEY_3, GROK_API_KEY_4])
-                scraper.save_to_firebase(all_leads)
-                print(f"Total leads saved: {len(all_leads)}")
-    else:
-        # Run single scraper
-        if args.city and args.state and args.business_type:
-            scraper = PhoneLeadScraper([GROK_API_KEY, GROK_API_KEY_2, GROK_API_KEY_3, GROK_API_KEY_4])
-            leads = scraper.get_phone_leads(args.city, args.state, args.business_type)
-            print(f"Found {len(leads)} leads")
-            scraper.save_to_firebase(leads)
-        else:
-            scraper = PhoneLeadScraper([GROK_API_KEY, GROK_API_KEY_2, GROK_API_KEY_3, GROK_API_KEY_4])
-            leads = scraper.get_random_leads(args.num_cities, args.num_business_types)
-            print(f"Found {len(leads)} leads")
-            scraper.save_to_firebase(leads)
+    # Initialize scraper with all available API keys
+    scraper = PhoneLeadScraper([
+        GROK_API_KEY,
+        GROK_API_KEY_2,
+        GROK_API_KEY_3,
+        GROK_API_KEY_4
+    ])
 
-if __name__ == '__main__':
+    # Get random cities and business types
+    selected_cities = random.sample(MAJOR_CITIES, min(args.num_cities, len(MAJOR_CITIES)))
+    selected_business_types = random.sample(BUSINESS_TYPES, min(args.num_business_types, len(BUSINESS_TYPES)))
+
+    all_leads = []
+    for city, state in selected_cities:
+        for business_type, description in selected_business_types:
+            print(f"Scraping leads for {business_type} in {city}, {state}")
+            leads = scraper.get_phone_leads(city, state, business_type)
+            all_leads.extend(leads)
+
+    # Save all leads to Firebase
+    if all_leads:
+        scraper.save_to_firebase(all_leads)
+        print(f"Successfully saved {len(all_leads)} leads to Firebase")
+    else:
+        print("No leads were found")
+
+if __name__ == "__main__":
     main() 

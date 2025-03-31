@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ref, onValue, update, get, remove } from 'firebase/database';
+import { ref, onValue, update, remove } from 'firebase/database';
 import { getFirebaseDatabase } from '../firebase';
 import LeadCard from './LeadCard';
 import ScoreFilter from './ScoreFilter';
@@ -13,6 +13,7 @@ const LeadsList = () => {
   const [selectedCity, setSelectedCity] = useState('all');
   const [selectedBusinessType, setSelectedBusinessType] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [calledFilter, setCalledFilter] = useState('all');
 
   useEffect(() => {
     const database = getFirebaseDatabase();
@@ -27,7 +28,8 @@ const LeadsList = () => {
           Object.entries(data).forEach(([city, cityData]) => {
             Object.entries(cityData).forEach(([businessType, businessData]) => {
               Object.entries(businessData).forEach(([batchKey, batchData]) => {
-                if (batchData.leads) {
+                // Check if batchData.leads exists and is an array
+                if (batchData && batchData.leads && Array.isArray(batchData.leads)) {
                   batchData.leads.forEach(lead => {
                     leadsArray.push({
                       ...lead,
@@ -36,6 +38,15 @@ const LeadsList = () => {
                       business_type: businessType,
                       batch_key: batchKey
                     });
+                  });
+                } else if (batchData && typeof batchData === 'object') {
+                  // If batchData is a direct lead object
+                  leadsArray.push({
+                    ...batchData,
+                    id: `${city}/${businessType}/${batchKey}/${batchData.name}`,
+                    city,
+                    business_type: businessType,
+                    batch_key: batchKey
                   });
                 }
               });
@@ -51,10 +62,6 @@ const LeadsList = () => {
       } finally {
         setLoading(false);
       }
-    }, (error) => {
-      console.error('Error fetching leads:', error);
-      setError('Failed to fetch leads');
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -64,10 +71,11 @@ const LeadsList = () => {
   const cities = ['all', ...new Set(leads.map(lead => lead.city))].sort();
   const businessTypes = ['all', ...new Set(leads.map(lead => lead.business_type))].sort();
 
-  const updateLeadNotes = async (batchKey, leadIndex, notes) => {
+  const updateLeadNotes = async (leadId, notes) => {
     try {
       const database = getFirebaseDatabase();
-      const leadRef = ref(database, `phoneLeads/${batchKey}/leads/${leadIndex}`);
+      const [city, businessType, batchKey, name] = leadId.split('/');
+      const leadRef = ref(database, `phoneLeads/${city}/${businessType}/${batchKey}/leads/${name}`);
       await update(leadRef, { notes });
     } catch (error) {
       console.error('Error updating lead notes:', error);
@@ -80,9 +88,13 @@ const LeadsList = () => {
       const database = getFirebaseDatabase();
       const [city, businessType, batchKey, name] = leadId.split('/');
       const leadRef = ref(database, `phoneLeads/${city}/${businessType}/${batchKey}/leads/${name}`);
-      await update(leadRef, { called: true });
+      await update(leadRef, { 
+        called: true,
+        calledAt: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error marking lead as called:', error);
+      setError('Failed to update lead status');
     }
   };
 
@@ -92,8 +104,12 @@ const LeadsList = () => {
       const [city, businessType, batchKey, name] = leadId.split('/');
       const leadRef = ref(database, `phoneLeads/${city}/${businessType}/${batchKey}/leads/${name}`);
       await remove(leadRef);
+      
+      // Update local state to remove the deleted lead
+      setLeads(prevLeads => prevLeads.filter(lead => lead.id !== leadId));
     } catch (error) {
       console.error('Error deleting lead:', error);
+      setError('Failed to delete lead');
     }
   };
 
@@ -102,6 +118,12 @@ const LeadsList = () => {
     .filter(lead => lead.overall_score >= minScore)
     .filter(lead => selectedCity === 'all' || lead.city === selectedCity)
     .filter(lead => selectedBusinessType === 'all' || lead.business_type === selectedBusinessType)
+    .filter(lead => {
+      if (calledFilter === 'all') return true;
+      if (calledFilter === 'called') return lead.called;
+      if (calledFilter === 'not_called') return !lead.called;
+      return true;
+    })
     .sort((a, b) => {
       const scoreA = a.overall_score;
       const scoreB = b.overall_score;
@@ -145,6 +167,16 @@ const LeadsList = () => {
             ))}
           </select>
 
+          <select
+            value={calledFilter}
+            onChange={(e) => setCalledFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="all">All Leads</option>
+            <option value="called">Called Leads</option>
+            <option value="not_called">Not Called Leads</option>
+          </select>
+
           <button 
             className="sort-button"
             onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
@@ -166,7 +198,7 @@ const LeadsList = () => {
           <LeadCard
             key={`${lead.id}-${index}`}
             lead={lead}
-            onUpdateNotes={(notes) => updateLeadNotes(lead.batch_key, index, notes)}
+            onUpdateNotes={(notes) => updateLeadNotes(lead.id, notes)}
             onMarkCalled={() => markLeadCalled(lead.id)}
             onDelete={() => deleteLead(lead.id)}
           />
